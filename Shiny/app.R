@@ -26,7 +26,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                   selectInput("prediction_Type", label="Choose Prediction:",
                                               choices= list("empty_animal"="empty_animal","species_model"="species_model"), 
                                               selected = "empty_animal"),
-                                  selectInput("prediction_modelChoice", label="Choose Moel:",
+                                  selectInput("prediction_modelChoice", label="Choose Model:",
                                               choices= list("Auto Selection"="AutoSelection","VGG Model"="VGGmodel", "RESNET Model"="Resnetmodel"), 
                                               selected = "Auto Selection"),
                                   shinyDirButton('prediction_model_dir', 'Models directory', title="Find and select the parent folder"),
@@ -106,10 +106,10 @@ server <- function(input, output,session) {
     showModal(modalDialog("Setup function complete."))
     output$setupresult <- renderText("Setup Completed!")
   })
-  
+  #submit
+  #output <- eventReactive(input$submitbutton, {MLWIC2::runShiny('classify')})
   
   #predict
-  
   observeEvent(
     input$predictionType,
     if(input$predictionType == "species_model"){
