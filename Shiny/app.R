@@ -21,16 +21,17 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                        tabPanel("Predict",value = "Predict",
                                 sidebarPanel(
                                   tags$h3("Predicting Inputs:"),
-                                  fileInput("prediction_data_info","Image label CSV file",accept = c(".csv")),
+                                  fileInput('prediction_data_info',"Image label CSV file",accept = c(".csv")),
                                   shinyDirButton('prediction_path_prefix', "Image directory", title="Select the parent directory where images are stored"),
                                   selectInput("prediction_Type", label="Choose Prediction:",
                                               choices= list("empty_animal"="empty_animal","species_model"="species_model"), 
                                               selected = "empty_animal"),
-                                  selectInput("prediction_modelChoice", label="Choose Moel:",
+                                  selectInput("prediction_modelChoice", label="Choose Model:",
                                               choices= list("Auto Selection"="AutoSelection","VGG Model"="VGGmodel", "RESNET Model"="Resnetmodel"), 
                                               selected = "Auto Selection"),
                                   shinyDirButton('prediction_model_dir', 'Models directory', title="Find and select the parent folder"),
-                                  actionButton("submitbutton","Submit",class="btn btn-primary")
+                                  actionButton("runSubmit","Submit",class="btn btn-primary"),
+                                  textOutput("submitresult")
                                   
                                 ), # sidebarPanel
                                 mainPanel(
@@ -94,7 +95,7 @@ server <- function(input, output,session) {
            "r-reticulate = ", input$r_reticulate, ", ",
            "gpu = ", input$gpu, ")","\n")
   })
-  #- run classify
+  # run setup
   observeEvent(input$runSetup, {
     showModal(modalDialog("Setting up environment... Dismiss anytime..."))
     setup(
@@ -106,6 +107,18 @@ server <- function(input, output,session) {
     showModal(modalDialog("Setup function complete."))
     output$setupresult <- renderText("Setup Completed!")
   })
+  #submit
+  observeEvent(input$runSubmit, {
+    showModal(modalDialog("Running Model"))
+    classify(path_prefix = '/Users/chet_/Documents/RESEARCH/CameraTrap/images', # path to where your images are stored
+             data_info = "/Users/chet_/Documents/RESEARCH/CameraTrap/MLWIC2_helper_files/data_info.csv", # path to csv containing file names and labels
+             model_dir = 'prediction_model_dir', # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
+             save_predictions = "model_predictions.txt", # how you want to name the raw output file
+             make_output = FALSE, # if TRUE, this will produce a csv with a more friendly output
+             num_cores = 4 # the number of cores you want to use on your computer. Try runnning parallel::detectCores() to see what you have available. You might want to use something like parallel::detectCores()-1 so that you have a core left on your machine for accomplishing other tasks. 
+    )
+    output$submitresult <- renderText("Complete.")
+    })
   
   
   #predict
