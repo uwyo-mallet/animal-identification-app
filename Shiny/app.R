@@ -110,9 +110,11 @@ server <- function(input, output,session) {
   #submit
   observeEvent(input$runSubmit, {
     showModal(modalDialog("Running Model"))
-    classify(path_prefix = '/Users/chet_/Documents/RESEARCH/CameraTrap/images', # path to where your images are stored
-             data_info = "/Users/chet_/Documents/RESEARCH/CameraTrap/MLWIC2_helper_files/data_info.csv", # path to csv containing file names and labels
-             model_dir = 'prediction_model_dir', # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
+    classify(path_prefix = , # path to where your images are stored
+             data_info = , # path to csv containing file names and labels
+             model_dir = , # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
+             python_loc = ,
+             os = ,
              save_predictions = "model_predictions.txt", # how you want to name the raw output file
              make_output = FALSE, # if TRUE, this will produce a csv with a more friendly output
              num_cores = 4 # the number of cores you want to use on your computer. Try runnning parallel::detectCores() to see what you have available. You might want to use something like parallel::detectCores()-1 so that you have a core left on your machine for accomplishing other tasks. 
@@ -122,7 +124,6 @@ server <- function(input, output,session) {
   
   
   #predict
-  
   observeEvent(
     input$predictionType,
     if(input$predictionType == "species_model"){
