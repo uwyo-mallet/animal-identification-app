@@ -15,14 +15,15 @@ if (!require('MLWIC2')) devtools::install_github("haniyeka/MLWIC2")
 library(MLWIC2)
 
 setwd(".")
+
 # Define UI
 ui <- fluidPage(theme = shinytheme("flatly"),
             navbarPage("Animal Identification",
                        tabPanel("Predict",value = "Predict",
                                 sidebarPanel(
-                                  tags$h3("Predicting Inputs:"),
-                                  fileInput('prediction_data_info',"Image label CSV file",accept = c(".csv")),
-                                  shinyDirButton('prediction_path_prefix', "Image directory", title="Select the parent directory where images are stored"),
+                                  tags$h3("Prediction Inputs:"),
+                                  shinyFilesButton('prediction_data_info',"Image label CSV file", "Select the image label csv file", multiple = FALSE),
+                                  shinyDirButton('prediction_path_prefix', "Image directory", "Select the parent directory where images are stored"),
                                   selectInput("prediction_Type", label="Choose Prediction:",
                                               choices= list("empty_animal"="empty_animal","species_model"="species_model"), 
                                               selected = "empty_animal"),
@@ -44,7 +45,6 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                 
                        ),
                        tabPanel("Retrain",value = "Retrain", "This panel is intentionally left blank"),
-                       navbarMenu("Setting",
                                   tabPanel("First-time Setup",value = "Setup",
                                            sidebarPanel(
                                              shinyDirButton('python_loc', "Python location", title="Select the location of Python. It should be under Anaconda. Just select the folder where it resides in the top half of the menu and press `Select`"),
@@ -73,10 +73,9 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                   )
                        )
             )
-  )
 
 # Define server function  
-server <- function(input, output,session) {
+server <- function(input, output, session) {
   #first-time setup
   #- make file selection for some variables
   # base directory for fileChoose
@@ -107,21 +106,28 @@ server <- function(input, output,session) {
     showModal(modalDialog("Setup function complete."))
     output$setupresult <- renderText("Setup Completed!")
   })
+  
   #submit
   observeEvent(input$runSubmit, {
     showModal(modalDialog("Running Model"))
-    classify(path_prefix = , # path to where your images are stored
-             data_info = , # path to csv containing file names and labels
-             model_dir = , # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
-             python_loc = ,
-             os = ,
+    path_prefix <- parseDirPath(volumes, input$prediction_path_prefix)
+    data <- parseFilePaths(volumes, input$prediction_data_info)
+    data_info <- data$datapath
+    print(data_info)
+    model_dir <- parseDirPath(volumes, input$prediction_model_dir)
+    python_loc <- parseDirPath(volumes, input$python_loc)
+    
+    classify(path_prefix = path_prefix, # path to where your images are stored
+             data_info = data_info, # path to csv containing file names and labels
+             model_dir = model_dir, # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
+             python_loc = python_loc,
+             os = "Windows",
              save_predictions = "model_predictions.txt", # how you want to name the raw output file
              make_output = FALSE, # if TRUE, this will produce a csv with a more friendly output
-             num_cores = 4 # the number of cores you want to use on your computer. Try runnning parallel::detectCores() to see what you have available. You might want to use something like parallel::detectCores()-1 so that you have a core left on your machine for accomplishing other tasks. 
-    )
-    output$submitresult <- renderText("Complete.")
+             num_cores = 4
+            )
+    showModal(modalDialog("Complete"))
     })
-  
   
   #predict
   observeEvent(
@@ -134,28 +140,24 @@ server <- function(input, output,session) {
     })
   
   shinyDirChoose(input, 'prediction_path_prefix', roots=volumes(), session=session)
-  prediction_path_prefix <- reactive({parseDirPath(volumes, input$prediction_path_prefix)})
-  observe({
-    if(!is.null(prediction_path_prefix)){
-      print(prediction_path_prefix())
-      output$predict_command_print <- renderText(prediction_path_prefix())
-    }
-  })
+ 
   shinyDirChoose(input, 'prediction_model_dir', roots=volumes(), session=session)
   prediction_model_dir <- reactive({parseDirPath(volumes, input$prediction_model_dir)})
-  observe({
-    if(!is.null(prediction_model_dir)){
-      print(prediction_model_dir())
-      output$predict_command_print <- renderText(prediction_model_dir())
-    }
-  })
+ observe({
+   if(!is.null(prediction_model_dir)){
+     print(prediction_model_dir())
+     output$predict_command_print <- renderText(prediction_model_dir())
+   }
+ })
+ 
+  shinyFileChoose(input, 'prediction_data_info', roots=volumes(), session=session)
   prediction_data_info <- reactive({input$prediction_data_info}) 
-  observe({
-    if(!is.null(prediction_data_info)){
-      print(prediction_data_info())
-      output$predict_command_print <- renderDataTable(prediction_data_info())
-    }
-  })
+ observe({
+   if(!is.null(prediction_data_info)){
+     print(prediction_data_info())
+     output$predict_command_print <- renderDataTable(prediction_data_info())
+   }
+ })
 } # server
 
 # Create Shiny object
