@@ -1,4 +1,4 @@
-packages = c("devtools","shiny", "shinythemes","shinyFiles")
+packages = c("devtools","shiny","shinythemes","shinyFiles")
 
 ## Now load or install & load all
 package.check <- lapply(
@@ -17,46 +17,38 @@ library(MLWIC2)
 setwd(".")
 
 # Define UI
-ui <- fluidPage(theme = shinytheme("flatly"),
+ui <- fluidPage(theme = shinytheme("cyborg"),
             navbarPage("Animal Identification",
                        tabPanel("Predict",value = "Predict",
                                 sidebarPanel(
                                   tags$h3("Prediction Inputs:"),
-                                  shinyFilesButton('prediction_data_info',"Image label CSV file", "Select the image label csv file", multiple = FALSE),
+                                  fileInput("prediction_data_info", "Choose the CSV file containing the image labels", multiple = FALSE, accept = c(".csv")),
                                   shinyDirButton('prediction_path_prefix', "Image directory", "Select the parent directory where images are stored"),
-                                  selectInput("prediction_Type", label="Choose Prediction:",
-                                              choices= list("empty_animal"="empty_animal","species_model"="species_model"), 
+                                  selectInput("prediction_type", label="Choose Prediction:",
+                                              choices= list("empty_animal"="empty_animal","species_model"="species_model","CFTEP"="CFTEP"), 
                                               selected = "empty_animal"),
                                   selectInput("prediction_modelChoice", label="Choose Model:",
-                                              choices= list("Auto Selection"="AutoSelection","VGG Model"="VGGmodel", "RESNET Model"="Resnetmodel"), 
+                                              choices= list("RESNET Model"="resnet","VGG Model"="vgg"), 
                                               selected = "Auto Selection"),
-                                  shinyDirButton('prediction_model_dir', 'Models directory', title="Find and select the parent folder"),
+                                  shinyDirButton('prediction_model_dir', 'Models directory', title="Select the parent folder"),
                                   actionButton("runSubmit","Submit",class="btn btn-primary"),
-                                  textOutput("submitresult")
-                                  
-                                ), # sidebarPanel
+                                  textOutput("submitresult"),
+                                  tableOutput(outputId = 'table.output'),
+                                  ), # sidebarPanel
+                                
                                 mainPanel(
                                   h1("Prediction Results"),
-                                  h4("Statistical Results"),
+                                  #h4("Statistical Results"),
                                   verbatimTextOutput("statisticalResults"),
                                   textOutput("predict_command_print")
-                                  
                                 ) # mainPanel
                                 
                        ),
                        tabPanel("Retrain",value = "Retrain", "This panel is intentionally left blank"),
-                                  tabPanel("First-time Setup",value = "Setup",
-                                           sidebarPanel(
-                                             shinyDirButton('python_loc', "Python location", title="Select the location of Python. It should be under Anaconda. Just select the folder where it resides in the top half of the menu and press `Select`"),
+                       tabPanel("Setup",value = "Setup",
+                                sidebarPanel(
                                              selectInput("r_reticulate", "Have you already installed packages in aconda environment called `r-reticulate` that you want to keep?
                                                          If you don't know, click `No`",
-                                                         choices = c(
-                                                           "No" = FALSE,
-                                                           "Yes" = TRUE
-                                                         )
-                                             ),
-                                             selectInput("gpu", "Do you have a GPU on your machine that you are planning to use?
-                                                           If you don't know, click `No`",
                                                          choices = c(
                                                            "No" = FALSE,
                                                            "Yes" = TRUE
@@ -81,14 +73,14 @@ server <- function(input, output, session) {
   # base directory for fileChoose
   volumes = getVolumes()
   # python_loc
-  shinyDirChoose(input, 'python_loc', roots=volumes(), session=session)
   dirname_python_loc <- reactive({parseDirPath(volumes, input$python_loc)})# Observe python_loc changes
-  observe({
-    if(!is.null(dirname_python_loc)){
-      print(dirname_python_loc())
-      output$python_loc <- renderText(dirname_python_loc())
-    }
-  })
+  
+ observe({
+   if(!is.null(dirname_python_loc)){
+     print(dirname_python_loc())
+     output$python_loc <- renderText(dirname_python_loc())
+   }
+ })
   output$python_loc_print <- renderText({
     paste0("setup(python_loc = '", normalizePath(dirname_python_loc()), "', ",
            "r-reticulate = ", input$r_reticulate, ", ",
@@ -109,55 +101,49 @@ server <- function(input, output, session) {
   
   #submit
   observeEvent(input$runSubmit, {
-    showModal(modalDialog("Running Model"))
-    path_prefix <- parseDirPath(volumes, input$prediction_path_prefix)
-    data <- parseFilePaths(volumes, input$prediction_data_info)
-    data_info <- data$datapath
-    print(data_info)
-    model_dir <- parseDirPath(volumes, input$prediction_model_dir)
-    python_loc <- parseDirPath(volumes, input$python_loc)
+    showModal(modalDialog("Running model, this may take some time."))
     
-    classify(path_prefix = path_prefix, # path to where your images are stored
-             data_info = data_info, # path to csv containing file names and labels
+    path_prefix <- parseDirPath(volumes, input$prediction_path_prefix)
+    
+    p_data_info <- input$prediction_data_info$datapath
+    
+    model_dir <- parseDirPath(volumes, input$prediction_model_dir)
+    
+    prediction_type <- input$prediction_type
+    
+    prediction_modelChoice <- input$prediction_modelChoice
+    
+    withProgress(message = 'Generating data',
+        classify(
+             path_prefix = path_prefix, # path to where your images are stored
+             data_info = p_data_info, # path to csv containing file names and labels
              model_dir = model_dir, # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
-             python_loc = python_loc,
+             python_loc = ,
              os = "Windows",
              save_predictions = "model_predictions.txt", # how you want to name the raw output file
-             make_output = FALSE, # if TRUE, this will produce a csv with a more friendly output
-             num_cores = 4
-            )
+             make_output = TRUE, # if TRUE, this will produce a csv with a more friendly output
+             output_location = NULL,
+             output_name = "MLWIC2_output.csv",
+             num_cores = 4,
+             log_dir = prediction_type,
+             architecture = prediction_modelChoice,
+             )
+    )
+    output$table.output <- renderTable({
+      table <- read.csv()
+      return(table)
+    })
     showModal(modalDialog("Complete"))
     })
   
   #predict
-  observeEvent(
-    input$predictionType,
-    if(input$predictionType == "species_model"){
-      updateSelectInput(session, "prediction_modelChoice",choices = list("RESNET Model"="Resnetmodel"))
-    }
-    else{
-      updateSelectInput(session, "prediction_modelChoice",choices = list("Auto Selection"="AutoSelection","VGG Model"="VGGmodel", "RESNET Model"="Resnetmodel"))
-    })
-  
   shinyDirChoose(input, 'prediction_path_prefix', roots=volumes(), session=session)
- 
+  prediction_path_prefix <- reactive({parseDirPath(volumes, input$prediction_path_prefix)})
+  
+  prediction_data_info <- reactive({input$prediction_data_info}) 
+  
   shinyDirChoose(input, 'prediction_model_dir', roots=volumes(), session=session)
   prediction_model_dir <- reactive({parseDirPath(volumes, input$prediction_model_dir)})
- observe({
-   if(!is.null(prediction_model_dir)){
-     print(prediction_model_dir())
-     output$predict_command_print <- renderText(prediction_model_dir())
-   }
- })
- 
-  shinyFileChoose(input, 'prediction_data_info', roots=volumes(), session=session)
-  prediction_data_info <- reactive({input$prediction_data_info}) 
- observe({
-   if(!is.null(prediction_data_info)){
-     print(prediction_data_info())
-     output$predict_command_print <- renderDataTable(prediction_data_info())
-   }
- })
 } # server
 
 # Create Shiny object
