@@ -19,49 +19,27 @@ setwd(".")
 # Define UI
 ui <- fluidPage(theme = shinytheme("cyborg"),
             navbarPage("Animal Identification",
+                       tabsetPanel(type = "tabs",
                        tabPanel("Predict",value = "Predict",
-                                sidebarPanel(
-                                  tags$h3("Prediction Inputs:"),
-                                  fileInput("prediction_data_info", "Choose the CSV file containing the image labels", multiple = FALSE, accept = c(".csv")),
-                                  shinyDirButton('prediction_path_prefix', "Image directory", "Select the parent directory where images are stored"),
-                                  selectInput("prediction_type", label="Choose Prediction:",
-                                              choices= list("empty_animal"="empty_animal","species_model"="species_model","CFTEP"="CFTEP"), 
-                                              selected = "empty_animal"),
-                                  selectInput("prediction_modelChoice", label="Choose Model:",
-                                              choices= list("RESNET Model"="resnet","VGG Model"="vgg"), 
-                                              selected = "Auto Selection"),
-                                  shinyDirButton('prediction_model_dir', 'Models directory', title="Select the parent folder"),
-                                  actionButton("runSubmit","Submit",class="btn btn-primary"),
-                                  textOutput("submitresult"),
-                                  tableOutput(outputId = 'table.output'),
-                                  ), # sidebarPanel
-                                
                                 mainPanel(
                                   h1("Prediction Results"),
-                                  #h4("Statistical Results"),
-                                  verbatimTextOutput("statisticalResults"),
-                                  textOutput("predict_command_print")
+                                  shinyDirButton('prediction_path_prefix', "Image directory", "Select the parent directory where images are stored"),
+                                  actionButton("runSubmit","Submit",class="btn btn-primary"),
+                                  textOutput("submitresult"),
+                                  #tableOutput(outputId = 'table.output'),
                                 ) # mainPanel
-                                
                        ),
-                       tabPanel("Retrain",value = "Retrain", "This panel is intentionally left blank"),
-                       tabPanel("Setup",value = "Setup",
-                                sidebarPanel(
-                                             selectInput("r_reticulate", "Have you already installed packages in aconda environment called `r-reticulate` that you want to keep?
-                                                         If you don't know, click `No`",
-                                                         choices = c(
-                                                           "No" = FALSE,
-                                                           "Yes" = TRUE
-                                                         )
-                                             ),
-                                             actionButton("runSetup", "Run Setup Function")
-                                           ),
-                                           # Main panel for displaying outputs ----
-                                           mainPanel(
-                                             helpText("Use this intallation just for the first time. This will install packages and setup the conda environment!"),
-                                             textOutput("python_loc_print"),
-                                             textOutput("setupresult")
-                                           )
+                      tabPanel("Settings",value = "Settings",
+                               sidebarPanel(
+                                 #fileInput("prediction_data_info", "Choose the CSV file containing the image labels", multiple = FALSE, accept = c(".csv")),
+                                 selectInput("prediction_type", label="Choose Prediction:",
+                                             choices= list("Contains Animals"="empty_animal","Species Identification"="species_model","CFTEP"="CFTEP"), 
+                                             selected = "empty_animal"),
+                                 #shinyDirButton('prediction_model_dir', 'Models directory', title="Select the parent folder"),
+                                 #selectInput("prediction_modelChoice", label="Choose Model:",
+                                 #            choices= list("RESNET Model"="resnet","VGG Model"="vgg"), 
+                                 #            selected = "Auto Selection"),
+                               ))
                                   )
                        )
             )
@@ -75,29 +53,29 @@ server <- function(input, output, session) {
   # python_loc
   dirname_python_loc <- reactive({parseDirPath(volumes, input$python_loc)})# Observe python_loc changes
   
- observe({
-   if(!is.null(dirname_python_loc)){
-     print(dirname_python_loc())
-     output$python_loc <- renderText(dirname_python_loc())
-   }
- })
-  output$python_loc_print <- renderText({
-    paste0("setup(python_loc = '", normalizePath(dirname_python_loc()), "', ",
-           "r-reticulate = ", input$r_reticulate, ", ",
-           "gpu = ", input$gpu, ")","\n")
-  })
-  # run setup
-  observeEvent(input$runSetup, {
-    showModal(modalDialog("Setting up environment... Dismiss anytime..."))
-    setup(
-      python_loc = gsub("\\\\", "/", paste0(normalizePath(dirname_python_loc()), "/")),
-      conda_loc = "auto",
-      #r_reticulate = promises::promise_resolve(input$r_reticulate),
-      gpu = input$gpu
-    )
-    showModal(modalDialog("Setup function complete."))
-    output$setupresult <- renderText("Setup Completed!")
-  })
+#observe({
+#  if(!is.null(dirname_python_loc)){
+#    print(dirname_python_loc())
+#    output$python_loc <- renderText(dirname_python_loc())
+#  }
+#})
+# output$python_loc_print <- renderText({
+#   paste0("setup(python_loc = '", normalizePath(dirname_python_loc()), "', ",
+#          "r-reticulate = ", input$r_reticulate, ", ",
+#          "gpu = ", input$gpu, ")","\n")
+# })
+# # run setup
+# observeEvent(input$runSetup, {
+#   showModal(modalDialog("Setting up environment... Dismiss anytime..."))
+#   setup(
+#     python_loc = gsub("\\\\", "/", paste0(normalizePath(dirname_python_loc()), "/")),
+#     conda_loc = "auto",
+#     #r_reticulate = promises::promise_resolve(input$r_reticulate),
+#     gpu = input$gpu
+#   )
+#   showModal(modalDialog("Setup function complete."))
+#   output$setupresult <- renderText("Setup Completed!")
+# })
   
   #submit
   observeEvent(input$runSubmit, {
@@ -113,10 +91,10 @@ server <- function(input, output, session) {
     
     prediction_modelChoice <- input$prediction_modelChoice
     
-    withProgress(message = 'Generating data',
+    #withProgress(message = 'Generating data',
         classify(
              path_prefix = path_prefix, # path to where your images are stored
-             data_info = p_data_info, # path to csv containing file names and labels
+             data_info =  ,# path to csv containing file names and labels
              model_dir = model_dir, # path to the helper files that you downloaded in step 3, including the name of this directory (i.e., `MLWIC2_helper_files`). Check to make sure this directory includes files like arch.py and run.py. If not, look for another folder inside this folder called `MLWIC2_helper_files`
              python_loc = ,
              os = "Windows",
@@ -128,11 +106,11 @@ server <- function(input, output, session) {
              log_dir = prediction_type,
              architecture = prediction_modelChoice,
              )
-    )
-    output$table.output <- renderTable({
-      table <- read.csv()
-      return(table)
-    })
+    #)
+    #output$table.output <- renderTable({
+    #  table <- read.csv()
+    #  return(table)
+    #})
     showModal(modalDialog("Complete"))
     })
   
