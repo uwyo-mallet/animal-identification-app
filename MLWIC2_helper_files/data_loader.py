@@ -70,7 +70,8 @@ class loader:
           paths.append(p)
           labels.append(int(l))
       else:
-        for p in reader:
+        for p in f.readlines():
+          p = p.strip()
           if not Path(self.path_prefix, p).is_file():
             continue
           paths.append(p)
@@ -80,39 +81,40 @@ class loader:
 
     if self.inference_only:
       return paths, None
+
     return paths, labels
 
-    f = open(self.input_file, "r")
-    filepaths = []
-    # if no label is provided just read input file names
-    if not self.inference_only:
-      labels = []
-      # loop to read the rows
-      for line in f:
-        tokens = line.split(self.delimiter)
-        if not Path(self.path_prefix, tokens[0]).is_file():
-          continue
-        filepaths.append(tokens[0])
-        labels.append(tokens[1].rstrip().lower())
-      # assign class ids
-      self.label_set = set(labels)
-      if all([ x.isdigit() for x in self.label_set]):
-        print("found %d classes"%(len(self.label_set)))
-        self.label_dict= {int(x): int(x) for x in sorted(self.label_set)}
-        labels= [int(x) for x in labels]
-      else:
-        print("found %d classes"%(len(self.label_set)))
-        self.label_dict= {i: x for i,x in enumerate(sorted(self.label_set))}
-        labels= [dict(zip(self.label_dict.values(), self.label_dict.keys()))[x] for x in labels]
-      print(self.label_dict)
-      return filepaths, labels
+    with open(self.input_file, "r") as f:
+      filepaths = []
+      # if no label is provided just read input file names
+      if not self.inference_only:
+        labels = []
+        # loop to read the rows
+        for line in f:
+          tokens = line.split(self.delimiter)
+          if not Path(self.path_prefix, tokens[0]).is_file():
+            continue
+          filepaths.append(tokens[0])
+          labels.append(tokens[1].rstrip().lower())
+        # assign class ids
+        self.label_set = set(labels)
+        if all([ x.isdigit() for x in self.label_set]):
+          print("found %d classes"%(len(self.label_set)))
+          self.label_dict= {int(x): int(x) for x in sorted(self.label_set)}
+          labels= [int(x) for x in labels]
+        else:
+          print("found %d classes"%(len(self.label_set)))
+          self.label_dict= {i: x for i,x in enumerate(sorted(self.label_set))}
+          labels= [dict(zip(self.label_dict.values(), self.label_dict.keys()))[x] for x in labels]
+        print(self.label_dict)
+        return filepaths, labels
 
-    else:
-      # loop to read rows
-      for line in f:
-          filepaths.append(line.rstrip())
-      # return results
-      return filepaths, None
+      else:
+        # loop to read rows
+        for line in f:
+            filepaths.append(line.rstrip())
+        # return results
+        return filepaths, None
 
   """
    This method takes a filename, read the image, do preprocessing, and return the result

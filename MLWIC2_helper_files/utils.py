@@ -44,7 +44,7 @@ Returns:
     number of samples and number of batches
 """
 def count_input_records(filename, batch_size):
-  with open(filename) as f:
+  with open(filename, 'rb') as f:
     num_samples = sum(1 for line in f)
   num_batches=num_samples/batch_size
   return num_samples, int(num_batches) if num_batches.is_integer() else int(num_batches)+1

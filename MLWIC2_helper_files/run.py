@@ -299,7 +299,7 @@ def do_evaluate(sess, args):
     coord.join(threads)
     sess.close()
 
-def main():  # pylint: disable=unused-argument
+def gen_argparser():
     parser = argparse.ArgumentParser(description='Process Command-line Arguments')
     parser.add_argument('command', action= 'store', help= 'Determines what to do: train, evaluate, or inference')
     parser.add_argument('--raw_size', nargs= 3, default= [256,256,3], type= int, action= 'store', help= 'The width, height and number of channels of images for loading from disk')
@@ -333,9 +333,13 @@ def main():  # pylint: disable=unused-argument
     parser.add_argument('--top_n', default= 5, type= int, action= 'store', help= 'Specify the top-N accuracy')
     parser.add_argument('--max_to_keep', default= 5, type= int, action= 'store', help= 'Maximum number of snapshot files to keep')
     parser.add_argument('--save_predictions', default= 'predictions.csv', action= 'store', help= 'Save top-n predictions of the networks along with their confidence in the specified file')
-    args = parser.parse_args()
+    return parser
 
+
+def main():  # pylint: disable=unused-argument
     # Spliting examples between different GPUs
+    parser = gen_argparser()
+    args = parser.parse_args()
     args.chunked_batch_size = int(args.batch_size/args.num_gpus)
 
     # Logging the runtime information if requested
@@ -352,7 +356,6 @@ def main():  # pylint: disable=unused-argument
         allow_soft_placement= True, 
         log_device_placement= args.log_device_placement))
 
-    print(args)
     if args.command.lower()=='train':
       #Assert input args
       assert args.train_info is not None, "No training dataset is provided, please provide an input file using --train_info option"
