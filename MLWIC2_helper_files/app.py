@@ -15,16 +15,18 @@ parser =  run.gen_argparser()
 def classify(images):
     args = parser.parse_args(["inference"])
     dict_args = vars(args)
-    # Create temporary folder and put temporary images in it.
+    # Create temporary folder and put images in it.
     with tempfile.TemporaryDirectory() as tmpdirname:
-        for image in images:
-            shutil.move(image.name, tmpdirname)
+        with open('images.txt', 'w') as f:
+            for image in images:
+                shutil.move(image.name, tmpdirname)
+                f.write(image.name.strip('/tmp/') + '\n')
 
         dict_args['path_prefix'] = tmpdirname
-        dict_args['log_dir'] = '/home/chet/Documents/MLWIC_Python3/Animal_identification_app/MLWIC2_helper_files/species_model'
-        dict_args['snapshot_prefix'] = '/home/chet/Documents/MLWIC_Python3/Animal_identification_app/MLWIC2_helper_files/species_model'
+        dict_args['log_dir'] = ''
+        dict_args['snapshot_prefix'] = ''
         dict_args['depth'] = 18
-        dict_args['val_info'] = 'images.txt'
+        dict_args['val_info'] = './images.txt'
 
         namespace_args = Namespace(**dict_args)
         namespace_args.num_val_samples, namespace_args.num_val_batches = utils.count_input_records(args.val_info, args.batch_size)
@@ -51,7 +53,7 @@ preview = gr.Interface(
     fn=classify,
     title=title,
     inputs=gr.inputs.File(file_count="multiple"),
-    outputs="image",
+    outputs="csv",
 )
 
 if __name__ == "__main__":
