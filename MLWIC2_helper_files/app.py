@@ -1,6 +1,6 @@
 # app.py
 # Chet Russell
-# Last edited: Feb 27
+# Last edited: March 7
 
 import gradio as gr
 import tempfile
@@ -24,8 +24,12 @@ def classify(images):
                 f.write(image.name.strip("/tmp/") + "\n")
 
         dict_args["path_prefix"] = tmpdirname
-        dict_args["log_dir"] = ""
-        dict_args["snapshot_prefix"] = ""
+        dict_args[
+            "log_dir"
+        ] = "/home/chet/Documents/MLWIC_Python3/Animal_identification_app/MLWIC2_helper_files/species_model"
+        dict_args[
+            "snapshot_prefix"
+        ] = "/home/chet/Documents/MLWIC_Python3/Animal_identification_app/MLWIC2_helper_files/species_model"
         dict_args["depth"] = 18
         dict_args["val_info"] = "./images.txt"
 
