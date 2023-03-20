@@ -332,7 +332,7 @@ def do_evaluate(sess, args):
         )
         labels_ph = tf.placeholder(tf.int32, shape=(None), name="label")
 
-        # a placeholder for determining if we train or validate the network. This placeholder will be used to set dropout rates and batchnorm paramaters.
+        # a placeholder for determining if we train or validate the network. This placeholder will be used to set dropout rwates and batchnorm paramaters.
         is_training_ph = tf.placeholder(tf.bool, name="is_training")
 
         # build a deep learning model using the provided configuration
@@ -433,7 +433,7 @@ def do_evaluate(sess, args):
                 print(
                     "Batch Number: %d of %d, Top-1 Hit: %d, Top-%d Hit: %d, Loss %.2f, Top-1 Accuracy: %.2f, Top-%d Accuracy: %.2f"
                     % (
-                        step,
+                        step + 1,
                         args.num_val_batches,
                         top1.sum,
                         args.top_n,
