@@ -1,12 +1,11 @@
 # app.py
 # Chet Russell
-# Last edited: Mar 20, 2023
+# Last edited: Mar 21, 2023
 
 import gradio as gr
 import os
 import csv
 import glob
-import tempfile
 import shutil
 import run
 import tensorflow as tf
@@ -17,6 +16,7 @@ parser = run.gen_argparser()
 
 
 def classify(images):
+    tf.reset_default_graph()
     args = parser.parse_args(["inference"])
     dict_args = vars(args)
     # Create temporary folder and put images in it.
@@ -134,18 +134,19 @@ def classify(images):
     with open("predictions.csv") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         for row in reader:
-            # print([names[int(row[2].strip())], row[7].strip()])
-            imagedata[row[1][2:]] = [
-                [names[int(row[2].strip())], row[7].strip()],
-                [names[int(row[3].strip())], row[8].strip()],
-                [names[int(row[4].strip())], row[9].strip()],
+            imagedata[row[1].strip()] = [
+                [' ' + names[int(row[2].strip())] + ': ' + row[7].strip()],
             ]
 
     print(imagedata)
 
-    # TODO: return a tuple for each image description
+    # return tuples for gradio
+    final_tuples = []
 
-    return image_list
+    for key in imagedata:
+        final_tuples.append([key.replace("'", ""), imagedata[key]])
+
+    return final_tuples
 
 
 title = "Animal Classification"
