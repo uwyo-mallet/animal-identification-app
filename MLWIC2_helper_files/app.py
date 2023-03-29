@@ -1,6 +1,6 @@
 # app.py
 # Chet Russell
-# Last edited: Mar 21, 2023
+# Last edited: Mar 29, 2023
 
 import gradio as gr
 import os
@@ -11,9 +11,15 @@ import run
 import tensorflow as tf
 import utils
 from argparse import Namespace
+import extract
+import pandas as pd
 
 parser = run.gen_argparser()
 
+def clean(directory):
+    old_images = glob.glob(directory + "*")
+    for f in old_images:
+        os.remove(f)
 
 def classify(images):
     tf.reset_default_graph()
@@ -21,22 +27,36 @@ def classify(images):
     dict_args = vars(args)
     # Create temporary folder and put images in it.
     # with tempfile.TemporaryDirectory() as tmpdirname:
-    dirname = "./images/"
+
+    original = "./original_images/"
+    resized = "./resized_images/"
+    temperature = "./temp_folder/"
 
     # Clean images folder
-    old_images = glob.glob(dirname + "*")
-    for f in old_images:
-        os.remove(f)
-
-    image_list = []
+    clean(original)    
+    clean(resized)
+    clean(temperature)
 
     with open("images.txt", "w") as f:
         for image in images:
-            shutil.move(image.name, dirname)
-            f.write(image.name.strip("/tmp/") + "\n")
-            image_list.append(dirname + image.name.strip("/tmp/"))
+            shutil.move(image.name, original)
+            old_file = os.path.join(original, image.name.strip("/tmp/"))
+            new_file = os.path.join(original, image.name.strip("/tmp/")[:-53])
+            os.rename(old_file, new_file + ".jpg")
+            f.write(new_file.strip(original) + ".jpg\n")
 
-    dict_args["path_prefix"] = dirname
+    
+    # Do tesseract image extraction on original images
+
+    # Image resizing
+    metadata = extract.meta_data(original, './temp_folder')
+    extract.crop(original, resized)
+
+    # Done with images
+
+    # Starting the model
+
+    dict_args["path_prefix"] = resized
     dict_args["log_dir"] = "./species_model"
     dict_args["snapshot_prefix"] = "./species_model"
     dict_args["depth"] = 18
@@ -65,6 +85,10 @@ def classify(images):
     )
 
     run.do_evaluate(sess, namespace_args)
+
+    # Done with model
+
+    # Starting post-processing
 
     imagedata = {}
 
@@ -130,31 +154,40 @@ def classify(images):
         58: "Wolverine",
     }
 
-    # Fill dictionary with top 3 classification results
+    # Fill dictionary with top classification result
     with open("predictions.csv") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         for row in reader:
-            imagedata[row[1].strip()] = [
-                [' ' + names[int(row[2].strip())] + ': ' + row[7].strip()],
-            ]
+            imagedata[row[1].strip()[17:]] = names[int(row[2].strip())] + ': ' + row[7].strip()
 
-    print(imagedata)
+    # Throw predictions in results csv file
+
+    for name in metadata['Name']:
+        for key in imagedata:
+            if name == key:
+                metadata['Animal'].append(imagedata[key])
+
+    print(metadata)
+
+    df = pd.DataFrame(metadata)
+    df.to_csv('results.csv', index=False)
 
     # return tuples for gradio
     final_tuples = []
 
     for key in imagedata:
-        final_tuples.append([key.replace("'", ""), imagedata[key]])
+        final_tuples.append(['./resized_images/' + key.replace("'", ""), key + ' | ' + imagedata[key]])
 
-    return final_tuples
+    return final_tuples, df
 
 
 title = "Animal Classification"
 preview = gr.Interface(
     fn=classify,
     title=title,
-    inputs=gr.inputs.File(file_count="multiple"),
-    outputs="gallery",
+    inputs=gr.Files(),
+    #inputs=gr.UploadButton(file_count="multiple"),
+    outputs=["gallery", "dataframe"],
     allow_flagging="never",
 )
 
