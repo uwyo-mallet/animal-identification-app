@@ -187,7 +187,7 @@ preview = gr.Interface(
     title=title,
     inputs=gr.Files(),
     #inputs=gr.UploadButton(file_count="multiple"),
-    outputs=["gallery", "dataframe"],
+    outputs=["gallery", gr.Dataframe(max_rows=3, overflow_row_behaviour="paginate")],
     allow_flagging="never",
 )
 

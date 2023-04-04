@@ -174,3 +174,6 @@ poetry.toml
 CFTEP/
 empty_animal/
 species_model/
+temp_folder/
+original_images/
+resized_images/
