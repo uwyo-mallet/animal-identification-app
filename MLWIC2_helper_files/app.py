@@ -1,6 +1,6 @@
 # app.py
 # Chet Russell
-# Last edited: Mar 29, 2023
+# Last edited: Apr 11, 2023
 
 import gradio as gr
 import os
@@ -158,14 +158,17 @@ def classify(images):
     with open("predictions.csv") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         for row in reader:
-            imagedata[row[1].strip()[17:]] = names[int(row[2].strip())] + ': ' + row[7].strip()
-
+            imagedata[row[1].strip()[17:]] = (names[int(row[2].strip())], row[7].strip())
+            
     # Throw predictions in results csv file
 
-    for name in metadata['Name']:
-        for key in imagedata:
-            if name == key:
-                metadata['Animal'].append(imagedata[key])
+    try:
+        for name in metadata['Name']:
+            animal, conf = imagedata[name]
+            metadata['Animal'].append(animal)
+            metadata['Confidence'].append(conf)
+    except:
+        print("A Key Error exception occured.")
 
     print(metadata)
 
@@ -176,20 +179,43 @@ def classify(images):
     final_tuples = []
 
     for key in imagedata:
-        final_tuples.append(['./resized_images/' + key.replace("'", ""), key + ' | ' + imagedata[key]])
+        print(key)
+        final_tuples.append(['./original_images/' + key.replace("'", ""), key + ' | ' + imagedata[key][0]])
 
-    return final_tuples, df
+    return final_tuples, df, 'results.csv'
 
 
 title = "Animal Classification"
-preview = gr.Interface(
-    fn=classify,
-    title=title,
-    inputs=gr.Files(),
-    #inputs=gr.UploadButton(file_count="multiple"),
-    outputs=["gallery", gr.Dataframe(max_rows=3, overflow_row_behaviour="paginate")],
-    allow_flagging="never",
-)
+#preview = gr.Interface(
+#    fn=classify,
+#    title=title,
+#    inputs=gr.File(file_count="multiple").style(border=True),
+#    #inputs=gr.UploadButton(file_count="multiple"),
+#    outputs=["gallery", gr.Dataframe(max_rows=3, overflow_row_behaviour="paginate"), "file"],
+#    allow_flagging="never",
+#    layout="vertical",
+#    #theme="dark",
+#)
+
+with gr.Blocks() as display:
+    gr.Markdown(
+    """
+    <h1 align="center"> Animal Classification </h1>
+    Input your images below to see the output.
+    """
+    )
+    with gr.Accordion("JPG Images"):
+        inp = gr.File(file_count="multiple", file_types=["image", ".jpg", ".jpeg"])
+    with gr.Accordion("Image Preview", open=False):
+        out0 = gr.Gallery()
+    with gr.Accordion("CSV File", open=False):
+        out1 = gr.Dataframe(max_rows=3, overflow_row_behaviour="paginate")
+    with gr.Accordion("CSV Download"):
+        out2 = gr.File()
+
+    b1 = gr.Button("Classify")
+
+    b1.click(classify, inputs=inp, outputs=[out0, out1, out2])
 
 if __name__ == "__main__":
-    preview.launch()
+    display.launch()
