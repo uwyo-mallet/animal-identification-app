@@ -177,3 +177,4 @@ species_model/
 temp_folder/
 original_images/
 resized_images/
+*.csv

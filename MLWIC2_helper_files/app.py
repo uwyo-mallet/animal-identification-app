@@ -1,6 +1,6 @@
 # app.py
 # Chet Russell
-# Last edited: Apr 18, 2023
+# Last edited: May 1, 2023
 
 import gradio as gr
 import os
@@ -14,8 +14,10 @@ from argparse import Namespace
 import extract
 import pandas as pd
 import tempfile
+from collections import defaultdict
 
 parser = run.gen_argparser()
+
 
 def clean(directory):
     old_images = glob.glob(directory + "*")
@@ -31,28 +33,33 @@ def classify(images, progress=gr.Progress()):
     temperature = "./temp_folder/"
 
     # Clean images folder
-    clean(original)    
+    clean(original)
     clean(resized)
     clean(temperature)
 
     ims = []
+    metadata = defaultdict(list)
 
-    #with open("images.txt", "w") as f:
+    # with open("images.txt", "w") as f:
     for image in progress.tqdm(images, desc="Image Preprocessing"):
         shutil.move(image.name, original)
         old_file = os.path.join(original, image.name.strip("/tmp/"))
         new_file = os.path.join(original, image.name.strip("/tmp/")[:-53])
         os.rename(old_file, new_file + ".jpg")
-        ims.append(new_file.strip(original) + ".jpg")
-        #f.write(new_file.strip(original) + ".jpg\n")
+        final_image = new_file.strip(original) + ".jpg"
+        ims.append(final_image)
+        print(final_image)
+        # f.write(new_file.strip(original) + ".jpg\n")
+        # extract.crop(new_file, resized)
+        extract.crop(new_file + ".jpg", final_image, resized)
+        extract.im_meta_data(new_file + ".jpg", final_image, temperature)
+        extract.meta_dict(
+            new_file + ".jpg", final_image, original, temperature, metadata
+        )
 
-    # Image resizing and metadata extraction
-    metadata = extract.meta_data(original, './temp_folder')
-    extract.crop(original, resized)
+    with open("allpredictions.csv", "w") as creating_new_csv_file:
+        pass
 
-    with open('allpredictions.csv', 'w') as creating_new_csv_file: 
-        pass 
-    
     for img in progress.tqdm(ims, desc="Classifying Images"):
         tf.reset_default_graph()
         args = parser.parse_args(["inference"])
@@ -60,7 +67,7 @@ def classify(images, progress=gr.Progress()):
         # Create temporary folder and put resized image in it.
         with tempfile.TemporaryDirectory() as tmpdirname:
 
-            shutil.copyfile(resized + img, tmpdirname + '/' + img)
+            shutil.copyfile(resized + img, tmpdirname + "/" + img)
 
             with open("images.txt", "w") as f:
                 f.write(img)
@@ -82,7 +89,9 @@ def classify(images, progress=gr.Progress()):
 
             # Logging the runtime information if requested
             if args.log_debug_info:
-                namespace_args.run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                namespace_args.run_options = tf.RunOptions(
+                    trace_level=tf.RunOptions.FULL_TRACE
+                )
                 namespace_args.run_metadata = tf.RunMetadata()
             else:
                 namespace_args.run_options = None
@@ -96,12 +105,12 @@ def classify(images, progress=gr.Progress()):
             )
 
             run.do_evaluate(sess, namespace_args)
-            with open('predictions.csv', 'r') as f:
+            with open("predictions.csv", "r") as f:
                 reader = csv.reader(f, delimiter="\t")
                 for i, line in enumerate(reader):
-                    with open('allpredictions.csv','a') as fd:
+                    with open("allpredictions.csv", "a") as fd:
                         fd.write(line[i])
-                        fd.write('\n')
+                        fd.write("\n")
 
     # Done with model
 
@@ -175,35 +184,43 @@ def classify(images, progress=gr.Progress()):
     with open("allpredictions.csv") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         for row in reader:
-            imagedata[row[1].strip()[17:]] = (names[int(row[2].strip())], row[7].strip())
-            
+            imagedata[row[1].strip()[17:]] = (
+                names[int(row[2].strip())],
+                row[7].strip(),
+            )
+
     # Throw predictions in results csv file
 
     try:
-        for name in metadata['Name']:
+        for name in metadata["Name"]:
             animal, conf = imagedata[name]
-            metadata['Animal'].append(animal)
-            metadata['Confidence'].append(conf)
+            metadata["Animal"].append(animal)
+            metadata["Confidence"].append(conf)
     except:
         print("A Key Error exception occured.")
 
     print(metadata)
 
     df = pd.DataFrame(metadata)
-    df.to_csv('results.csv', index=False)
+    df.to_csv("results.csv", index=False)
 
     # return tuples for gradio
     final_tuples = []
 
     for key in imagedata:
         print(key)
-        final_tuples.append(['./original_images/' + key.replace("'", ""), key + ' | ' + imagedata[key][0]])
+        final_tuples.append(
+            [
+                "./original_images/" + key.replace("'", ""),
+                key + " | " + imagedata[key][0],
+            ]
+        )
 
-    return final_tuples, df, 'results.csv'
+    return final_tuples, df, "results.csv"
 
 
 title = "Animal Classification"
-#preview = gr.Interface(
+# preview = gr.Interface(
 #    fn=classify,
 #    title=title,
 #    inputs=gr.File(file_count="multiple").style(border=True),
@@ -212,11 +229,11 @@ title = "Animal Classification"
 #    allow_flagging="never",
 #    layout="vertical",
 #    #theme="dark",
-#)
+# )
 
 with gr.Blocks() as display:
     gr.Markdown(
-    """
+        """
     <h1 align="center"> Animal Classification </h1>
     Input your images below to see the output.
     """
@@ -229,6 +246,7 @@ with gr.Blocks() as display:
         out1 = gr.Dataframe(max_rows=3, overflow_row_behaviour="paginate")
     with gr.Accordion("CSV Download"):
         out2 = gr.File()
+        # b2 = gr.Button("Download CSV")
 
     b1 = gr.Button("Classify")
 
