@@ -3,6 +3,8 @@
 For more information on the features and how to use this code, please refer to the readme file.
 
 """
+# Last edited May 2, 2023 - Chet Russell
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -12,6 +14,7 @@ import os.path
 import time
 
 import numpy as np
+import gradio as gr
 
 # add this to suppress warnings with tensorflow
 import warnings
@@ -324,7 +327,7 @@ def do_train(sess, args):
 """
 
 
-def do_evaluate(sess, args):
+def do_evaluate(sess, args, progress):
     with tf.device("/cpu:0"):
         # Images and labels placeholders
         images_ph = tf.placeholder(
@@ -467,12 +470,12 @@ def do_evaluate(sess, args):
             out_file = open(args.save_predictions, "w")
             predictions_format_str = "%d, %s, %s, %s\n"
 
-            for step in range(args.num_val_batches):
+            for step in progress.tqdm(range(args.num_val_batches), desc="Image Processing"):
                 # Load a batch of data
                 val_img, val_inf = sess.run(
                     [val_images, val_info],
                     feed_dict={batch_size_tf: args.num_val_samples % args.batch_size}
-                    if step == args.num_val_batches - 1
+                    if step == args.num_val_batches + 1
                     else None,
                 )
 
@@ -483,7 +486,7 @@ def do_evaluate(sess, args):
                     options=args.run_options,
                     run_metadata=args.run_metadata,
                 )
-                print("Batch Number: %d of %d is done" % (step, args.num_val_batches))
+                print("Batch Number: %d of %d is done" % (step + 1, args.num_val_batches))
 
                 # Log to an output file
                 for i in range(0, val_inf.shape[0]):
