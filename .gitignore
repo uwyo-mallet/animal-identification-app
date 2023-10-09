@@ -1,7 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
-./MLWIC2_helper_files/architectures
+./Animal_identification_app/MLWIC2_helper_files/architectures
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
