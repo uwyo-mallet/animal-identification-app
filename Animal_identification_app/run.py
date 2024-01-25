@@ -3,7 +3,7 @@
 For more information on the features and how to use this code, please refer to the readme file.
 
 """
-# Last edited May 2, 2023 - Chet Russell
+# Last edited November 9, 2023 - Chet Russell
 
 from __future__ import absolute_import
 from __future__ import division
@@ -327,7 +327,7 @@ def do_train(sess, args):
 """
 
 
-def do_evaluate(sess, args, progress):
+def do_evaluate(sess, args, progress, total_ims):
     with tf.device("/cpu:0"):
         # Images and labels placeholders
         images_ph = tf.placeholder(
@@ -377,6 +377,9 @@ def do_evaluate(sess, args, progress):
         else:
             val_images, val_info = val_loader.load()
 
+        #from pprint import pprint
+        #pprint(val_images)
+
         # get evaluation operations from the dnn model
         eval_ops = dnn_model.evaluate_ops(args.inference_only)
 
@@ -404,6 +407,7 @@ def do_evaluate(sess, args, progress):
 
             for step in range(args.num_val_batches):
                 # Load a batch of data
+
                 val_img, val_lbl, val_inf = sess.run(
                     [val_images, val_labels, val_info],
                     feed_dict={batch_size_tf: args.num_val_samples % args.batch_size}
@@ -470,7 +474,11 @@ def do_evaluate(sess, args, progress):
             out_file = open(args.save_predictions, "w")
             predictions_format_str = "%d, %s, %s, %s\n"
 
-            for step in progress.tqdm(range(args.num_val_batches), desc="Image Processing"):
+            # Old progress bar
+            #for step in progress.tqdm(range(args.num_val_batches), desc="Image Processing"):
+            # New progress bar
+            for step in range(args.num_val_batches):
+                progress(.5 + ((step+1) * (.5/total_ims)), desc="Image Processing")
                 # Load a batch of data
                 val_img, val_inf = sess.run(
                     [val_images, val_info],
@@ -586,7 +594,8 @@ def gen_argparser():
     )
     parser.add_argument(
         "--num_threads",
-        default=20,
+        default=1,
+        #default=20,
         type=int,
         action="store",
         help="The number of threads for loading data",

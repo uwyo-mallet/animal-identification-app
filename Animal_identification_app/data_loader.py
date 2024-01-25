@@ -84,37 +84,37 @@ class loader:
 
     return paths, labels
 
-    with open(self.input_file, "r") as f:
-      filepaths = []
-      # if no label is provided just read input file names
-      if not self.inference_only:
-        labels = []
-        # loop to read the rows
-        for line in f:
-          tokens = line.split(self.delimiter)
-          if not Path(self.path_prefix, tokens[0]).is_file():
-            continue
-          filepaths.append(tokens[0])
-          labels.append(tokens[1].rstrip().lower())
-        # assign class ids
-        self.label_set = set(labels)
-        if all([ x.isdigit() for x in self.label_set]):
-          print("found %d classes"%(len(self.label_set)))
-          self.label_dict= {int(x): int(x) for x in sorted(self.label_set)}
-          labels= [int(x) for x in labels]
-        else:
-          print("found %d classes"%(len(self.label_set)))
-          self.label_dict= {i: x for i,x in enumerate(sorted(self.label_set))}
-          labels= [dict(zip(self.label_dict.values(), self.label_dict.keys()))[x] for x in labels]
-        print(self.label_dict)
-        return filepaths, labels
+    #with open(self.input_file, "r") as f:
+    #  filepaths = []
+    #  # if no label is provided just read input file names
+    #  if not self.inference_only:
+    #    labels = []
+    #    # loop to read the rows
+    #    for line in f:
+    #      tokens = line.split(self.delimiter)
+    #      if not Path(self.path_prefix, tokens[0]).is_file():
+    #        continue
+    #      filepaths.append(tokens[0])
+    #      labels.append(tokens[1].rstrip().lower())
+    #    # assign class ids
+    #    self.label_set = set(labels)
+    #    if all([ x.isdigit() for x in self.label_set]):
+    #      print("found %d classes"%(len(self.label_set)))
+    #      self.label_dict= {int(x): int(x) for x in sorted(self.label_set)}
+    #      labels= [int(x) for x in labels]
+    #    else:
+    #      print("found %d classes"%(len(self.label_set)))
+    #      self.label_dict= {i: x for i,x in enumerate(sorted(self.label_set))}
+    #      labels= [dict(zip(self.label_dict.values(), self.label_dict.keys()))[x] for x in labels]
+    #    print(self.label_dict)
+    #    return filepaths, labels
 
-      else:
-        # loop to read rows
-        for line in f:
-            filepaths.append(line.rstrip())
-        # return results
-        return filepaths, None
+    #  else:
+    #    # loop to read rows
+    #    for line in f:
+    #        filepaths.append(line.rstrip())
+    #    # return results
+    #    return filepaths, None
 
   """
    This method takes a filename, read the image, do preprocessing, and return the result
@@ -192,8 +192,12 @@ class loader:
 
     else:
 
-      filename_queue = tf.train.slice_input_producer([filenames], shuffle= self.shuffle if self.is_training else False)
+      filename_queue = tf.compat.v1.train.slice_input_producer([filenames], shuffle= self.shuffle if self.is_training else False)
       image_queue= filename_queue[0]
+
+      #from pprint import pprint
+      #pprint(image_queue)
+
       reshaped_image = self.preprocess(image_queue)
       img_info = image_queue
 
@@ -201,7 +205,7 @@ class loader:
          'This may take some time.' % self.num_prefetch)
 
       # Load images and labels with additional info and return batches
-      return tf.train.batch(
+      return tf.compat.v1.train.batch(
         [reshaped_image, img_info],
         batch_size= self.batch_size,
         num_threads= self.num_threads,
