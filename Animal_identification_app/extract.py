@@ -1,7 +1,7 @@
 # extract.py
 # Chet Russell
 # Based on code written by Haniye Kashgarani
-# Last edited: October 24, 2023
+# Last edited: April 11, 2024
 
 import PIL.ImageOps
 from PIL.ExifTags import TAGS
@@ -20,36 +20,18 @@ import array as arr
 def crop(f, im_name, dst_dir):
     allfiles=[]
 
-    #for root, dirs, files in os.walk(src_dir):
-    #    print("1")
-    #    for f in files:
-    #        print(f)
     if f.endswith(".JPG") or f.endswith(".jpg") or f.endswith(".jpeg"):
-        #allfiles.append(os.path.join(src_dir,f))
-        #img = cv2.imread(os.path.join(src_dir,f),cv2.IMREAD_UNCHANGED)
-        ##print('Original Dimensions : ',img.shape)
-        #img = cv2.resize(img, (422,237))
-        #status = cv2.imwrite(os.path.join(dst_dir,f),img)
-        ##print("Image written to file-system : "+os.path.join(dst_dir,f),status,'\n')
-
         image = Image.open(f)
         x, y = image.size
         rimage = image.copy()
         rimage.thumbnail((256, 256), resample=Image.LANCZOS)
-        # rimage = Image.new('RGBA', (x, x), (0, 0, 0, 0))
-        # rimage.paste(image, (0, int((x - y) / 2)))
-        # rimage = rimage.resize((256,256))
         rimage.save(dst_dir + im_name)
 
 def im_meta_data(f, im_name, dst_dir):
 
     # Grabs temperature
-    #for root, dirs, files in os.walk(src_dir):
-    #    for f in files:
     if f.endswith(".JPG") or f.endswith(".jpg") or f.endswith(".jpeg"):
         image = Image.open(f)
-        # crop image and save to destination directory
-        
 
         # iterating over all EXIF data fields
         exifdata = image.getexif()
