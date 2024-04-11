@@ -6,9 +6,9 @@ import gradio as gr
 import os
 import csv
 import shutil
-import run
+from MLWIC2 import run
 import tensorflow as tf
-import utils
+from MLWIC2 import utils
 from argparse import Namespace
 import extract
 import pandas as pd
